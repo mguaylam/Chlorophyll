@@ -26,10 +26,14 @@ markers.
 ### 1. Strings and static analysis
 
 - `strings` on the firmware images published upstream → inventory of AT
-  commands (`+XNAD_*`), URLs, error messages.
-- Ghidra for control flow around interesting strings (auth, packet framing).
-- Output: facts marked `[TO CONFIRM: firmware strings]` until corroborated by
-  a second source.
+  commands (`+XNAD*`, `+XPOW`, `+XDNS`…), URLs, config keys, error messages.
+  Done — see [firmware-findings.md](firmware-findings.md). Key result: the app
+  processor delegates all CAN to a separate S12 MCU, so the EV-CAN IDs are not
+  in this dump.
+- Ghidra for control flow around interesting strings (auth, packet framing,
+  the app↔S12 message format). Not yet done.
+- Output: existence of a feature is `[VERIFIED: firmware strings]`; its
+  interpretation stays `[TO CONFIRM]` until corroborated by a second source.
 
 ### 2. Server-side reading
 

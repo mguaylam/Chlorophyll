@@ -56,6 +56,7 @@ Details: [docs/architecture.md](docs/architecture.md)
 | [evcan-telemetry.md](docs/evcan-telemetry.md) | EV-CAN frames to read for telemetry |
 | [pinout.md](docs/pinout.md) | M67 / M68 / M113 connectors |
 | [hardware.md](docs/hardware.md) | Proposed BOM, power budget |
+| [firmware-findings.md](docs/firmware-findings.md) | What the firmware dump reveals (strings) |
 | [reverse-engineering.md](docs/reverse-engineering.md) | Methodology and credits |
 
 **Epistemic stance**: every technical claim in this documentation carries a

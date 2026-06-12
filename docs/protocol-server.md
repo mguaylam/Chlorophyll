@@ -125,8 +125,12 @@ communication/README.md — upstream's analysis, not yet reproduced]`. The TCU
 also has a separate "ACP SMS" channel (stolen-vehicle tracking, FOTA,
 immobilizer) not analyzed upstream — out of scope for Chlorophyll.
 
-Retry behavior and periodic reporting cadence: `[TO CONFIRM: firmware / live
-capture]`.
+Firmware strings confirm the TCU also reports **periodically**, with separate
+intervals for ignition-on vs ignition-off (`AcpEvHisReporter`), not only on
+command `[VERIFIED: firmware strings 06.42R — see firmware-findings.md]`. The
+server port is read from provisioned config, not hardcoded, and the IP stack
+is lwIP with TCP keepalive. Exact default intervals and retry behavior:
+`[TO CONFIRM: disassembly / live capture]`.
 
 ## To verify (Phase 0)
 

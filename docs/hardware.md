@@ -36,12 +36,16 @@ forum]`.
 
 **Target for this TCU: < 5 mA average in standby.**
 
-Tracks to get there `[TBD — to validate by measurement]`:
+Tracks to get there `[TBD — to validate by measurement]`, mirroring how the
+original TCU does it (`[VERIFIED: firmware strings — see
+firmware-findings.md]`: it keeps the baseband asleep and uses a small
+always-on controller to wake it on ACC, a periodic timer, or modem activity):
 
 - ESP32-S3 deep sleep (a few tens of µA) + periodic wake-up.
 - Modem in PSM/eDRX if remote wake-up allows it, otherwise full modem
   power-off and acceptance of command latency.
-- Wake on vehicle activity (ACC/ON signals from M67, CAN activity).
+- Wake on vehicle activity: ACC line (M67 pin 3), CAN activity, and modem RI
+  on inbound SMS.
 
 Every figure in this section is `[TO MEASURE: bench ammeter / µCurrent]` once
 a prototype exists.
