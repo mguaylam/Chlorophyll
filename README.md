@@ -3,9 +3,10 @@
 **Status: very early / WIP — nothing works yet. Documentation under verification.**
 
 Replacement TCU (Telematics Control Unit) for the Nissan Leaf AZE0, based on an
-ESP32-S3 + LTE modem. The original TCU (type GNOV1N, Continental) is 2G-only;
-the 2G network is dead or dying in Canada `[TO CONFIRM: see docs/network-2g-status.md]`,
-which makes the telematics services (CARWINGS / NissanConnect EV) unusable.
+ESP32-S3 + LTE modem. The original TCU (type GNOV1N, Continental) is 2G-only,
+and the Nissan CARWINGS / NissanConnect EV backend it talked to is gone — so
+the factory telematics are dead either way. This project replaces the modem
+with LTE and the backend with a self-hosted OpenCARWINGS server.
 
 Goal: a home-built TCU that speaks the CARWINGS protocol to a self-hosted
 [OpenCARWINGS](https://github.com/developerfromjokela/opencarwings) server over
@@ -55,7 +56,6 @@ Details: [docs/architecture.md](docs/architecture.md)
 | [pinout.md](docs/pinout.md) | M67 / M68 / M113 connectors |
 | [hardware.md](docs/hardware.md) | Proposed BOM, power budget |
 | [reverse-engineering.md](docs/reverse-engineering.md) | Methodology and credits |
-| [network-2g-status.md](docs/network-2g-status.md) | 2G status in Canada |
 
 **Epistemic stance**: every technical claim in this documentation carries a
 status marker — `[VERIFIED: source]`, `[TO CONFIRM: source]`, `[TO MEASURE]`
