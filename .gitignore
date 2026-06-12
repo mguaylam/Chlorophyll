@@ -1,0 +1,52 @@
+# --- Binaries / proprietary firmware (NEVER commit) ---
+*.bin
+*.hex
+*.elf
+*.img
+*.fw
+*.srec
+
+# --- Builds ---
+build/
+.pio/
+.pioenvs/
+.piolibdeps/
+cmake-build-*/
+sdkconfig.old
+managed_components/
+dependencies.lock
+
+# --- Secrets / local config ---
+secrets.h
+secrets.yaml
+secrets.json
+*.pem
+*.key
+*.p12
+.env
+.env.*
+credentials*
+
+# --- IDE / editors ---
+.vscode/
+.idea/
+*.swp
+*~
+
+# --- Python (tools/) ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Captures / working dumps (may contain proprietary data) ---
+*.pcap
+*.pcapng
+dumps/
+captures/
