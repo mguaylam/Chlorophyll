@@ -18,11 +18,18 @@ repository.
 | AZE0 service manual | `[TBD — owned copy; not redistributable]` | Source for M67/M68/M113 pinouts. Sections used: `[TBD: note section numbers here as they are used]` |
 | MyNissanLeaf forum | https://mynissanleaf.com | CAN bus docs, TCU threads, 12V battery drain data. Cite specific threads in docs/ when used. |
 
+## Original TCU hardware
+
+| Resource | Link | Notes |
+|---|---|---|
+| FCC filing LHJGNOV1N | https://fcc.report/FCC-ID/LHJGNOV1N | 2G TCU (GNOV1N), Continental NOVANTO platform. Upstream notes: Freescale MC9S12XEQ512 (CAN) + Infineon PMB8876 (baseband/app), Nucleus RTOS `[TO CONFIRM: nissan-leaf-tcu device/README.md]` |
+| TCU teardown thread | https://mynissanleaf.com/threads/tcu-teardown.34309/ | UART pinout (majbthrd) |
+
 ## Security research
 
 | Resource | Link | Notes |
 |---|---|---|
-| DEF CON 25 — Leaf telematics | `[TBD: exact talk title and link]` | Mickey Shkatov et al. |
+| DEF CON 25 — "Driving down the rabbit hole" | https://www.youtube.com/watch?v=5QBOmr_ZyLo | Mickey Shkatov, Jesse Michael, Oleksandr Bazhaniuk |
 
 ## Hardware datasheets
 

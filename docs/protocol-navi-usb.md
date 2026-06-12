@@ -17,15 +17,28 @@ Internal link between the TCU and the AV (navigation) unit. **Phase 2**
 
 ## Command layer
 
-Proprietary AT commands of the **`+XNAD_*`** family exchanged over the CDC
-link `[TO CONFIRM: firmware strings, nissan-leaf-tcu repo]`.
+The **`+XNAD*`** AT command family exists in the TCU firmware
+`[VERIFIED: strings of firmware-06.42 application.bin (nissan-leaf-tcu@1372ec9),
+69 occurrences, extracted locally on 2026-06-11]`. **Which transport carries
+them (the navi USB link vs an internal baseband↔CPU interface) is NOT
+established**: `[TO CONFIRM — the strings prove the commands exist, not where
+they travel]`.
 
-Command list, parameters and responses: `[TBD — inventory to build from the
-firmware strings, without copying the firmware itself]`.
+Inventory extracted from the firmware strings (names only; parameters and
+semantics `[TBD]`):
 
-| Command | Assumed role | Status |
+| Command group | Members | Assumed role |
 |---|---|---|
-| `+XNAD_…` | `[TBD]` | `[TBD]` |
+| `+XNAD_DCM_Params_*` | `VIN`, `DCM_ID`, `DCM_VER`, `NAVI_ID`, `EV_SVC`, `CHG_HIST`, `PRE_AC_HIST` | Identity/config exchange (VIN, unit IDs, EV service settings, histories) `[TO CONFIRM]` |
+| `+XNAD_DICCIDSER` | — | SIM ICCID report `[TO CONFIRM]` |
+| Call control | `+XNAD_Ecall_*`, `+XNAD_ACNcall_*`, `+XNAD_servicecall_*` (each: `start_request`, `end_request`, `go_to_voice`, `go_to_data`) | eCall / automatic collision notification / operator call session control `[TO CONFIRM]` |
+| `+XNAD_NAVI_Info_sent` | — | Navi data handshake `[TO CONFIRM]` |
+| Modem/system | `+XNADFS`, `+XNADFOTA`, `+XNADTRACE`, `+XNADPIDAT`, `+XNADPIDCTRL`, `+XNADPWRCNT` | Filesystem, OTA update, tracing, power control `[TO CONFIRM]` |
+
+Observed syntax patterns in the strings: `AT+XNADFS=`, `AT+XNADFS?`,
+`+XNAD_DCM_Params_EV_SVC:(0,1),(0-1440),(0,1)` (test form with ranges) —
+consistent with a standard AT command grammar
+`[VERIFIED: firmware strings]`.
 
 ## Emulation strategy (Phase 2)
 

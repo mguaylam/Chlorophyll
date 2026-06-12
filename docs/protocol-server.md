@@ -117,8 +117,16 @@ and 6 kW OBC flags, packed as bitfields — exact bit layout in
    and GPS; server pushes user notifications.
 4. Connection closes; nothing persistent.
 
-How long the real TCU keeps the socket open, retry behavior, and periodic
-reporting cadence: `[TO CONFIRM: firmware / live capture]`.
+Upstream documentation adds: the real TCU waits specifically for the SMS text
+`NISSAN_EVIT_TELEMATICS_CENTER`, then connects to the programmed server on
+port 55230, sends INIT, and **times out after about 20–30 s** if no valid
+command response arrives `[TO CONFIRM: nissan-leaf-tcu@1372ec9,
+communication/README.md — upstream's analysis, not yet reproduced]`. The TCU
+also has a separate "ACP SMS" channel (stolen-vehicle tracking, FOTA,
+immobilizer) not analyzed upstream — out of scope for Chlorophyll.
+
+Retry behavior and periodic reporting cadence: `[TO CONFIRM: firmware / live
+capture]`.
 
 ## To verify (Phase 0)
 
