@@ -29,7 +29,9 @@ the small 12V battery — see [hardware.md](hardware.md).
 The TCU sits on the EV-CAN, available directly on **M67 terminals 9 (CAN H)
 and 10 (CAN L)** `[VERIFIED: 2015 Leaf NAM SM, AV-538]` — so power, ignition
 sensing and the vehicle bus all come through the one connector the original
-TCU already uses. VCM / HVBAT / OBC dialogue details, frame IDs and bitrate:
+TCU already uses. Frame IDs to read for telemetry (VCM / HVBAT / OBC), the
+bitrate, and the listen-only verification plan are in
+[evcan-telemetry.md](evcan-telemetry.md); all candidate IDs are still
 `[TO MEASURE: sniff at M67]`.
 
 ### 3. Cellular (LTE)

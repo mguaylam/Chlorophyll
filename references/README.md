@@ -16,7 +16,8 @@ repository.
 | Resource | Link / location | Notes |
 |---|---|---|
 | 2015 Leaf NAM service manual | AM-0ZE0-U0-0002-15, rev. June 2014 — owned copy, not redistributable | Sections used so far: AV (TELEMATICS SYSTEM: wiring diagram AV-529+, connector tables AV-538/540, DTC/circuit diagnosis AV-585..591), PG (harness connector list PG-53) |
-| MyNissanLeaf forum | https://mynissanleaf.com | CAN bus docs, TCU threads, 12V battery drain data. Cite specific threads in docs/ when used. |
+| MyNissanLeaf forum | https://mynissanleaf.com | CAN bus docs, TCU threads, 12V battery drain data. Source for the EV-CAN telemetry frame IDs to verify (see docs/evcan-telemetry.md). Cite specific threads in docs/ when used. |
+| Leaf CAN-decoder projects / LeafSpy field docs | `[TBD: pin exact links as IDs are confirmed]` | Cross-check source for EV-CAN frame offsets/scaling before promoting to VERIFIED. |
 
 ## Original TCU hardware
 

@@ -53,6 +53,7 @@ Details: [docs/architecture.md](docs/architecture.md)
 | [architecture.md](docs/architecture.md) | System overview |
 | [protocol-server.md](docs/protocol-server.md) | TCU ↔ server protocol (port 55230) |
 | [protocol-navi-usb.md](docs/protocol-navi-usb.md) | TCU ↔ AV unit USB link (AT +XNAD) |
+| [evcan-telemetry.md](docs/evcan-telemetry.md) | EV-CAN frames to read for telemetry |
 | [pinout.md](docs/pinout.md) | M67 / M68 / M113 connectors |
 | [hardware.md](docs/hardware.md) | Proposed BOM, power budget |
 | [reverse-engineering.md](docs/reverse-engineering.md) | Methodology and credits |
