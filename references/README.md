@@ -15,7 +15,7 @@ repository.
 
 | Resource | Link / location | Notes |
 |---|---|---|
-| AZE0 service manual | `[TBD — owned copy; not redistributable]` | Source for M67/M68/M113 pinouts. Sections used: `[TBD: note section numbers here as they are used]` |
+| 2015 Leaf NAM service manual | AM-0ZE0-U0-0002-15, rev. June 2014 — owned copy, not redistributable | Sections used so far: AV (TELEMATICS SYSTEM: wiring diagram AV-529+, connector tables AV-538/540, DTC/circuit diagnosis AV-585..591), PG (harness connector list PG-53) |
 | MyNissanLeaf forum | https://mynissanleaf.com | CAN bus docs, TCU threads, 12V battery drain data. Cite specific threads in docs/ when used. |
 
 ## Original TCU hardware

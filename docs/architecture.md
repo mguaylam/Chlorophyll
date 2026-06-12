@@ -19,15 +19,18 @@ The original TCU (type GNOV1N, SW 06.42R, HW 95048, made by Continental)
 
 ### 1. Power (M67 connector)
 
-Permanent 12V battery feed + ACC/ON signals `[TO CONFIRM: service manual]`.
-Details and pinout: [pinout.md](pinout.md). Key constraint: standby power draw
-compatible with the small 12V battery — see [hardware.md](hardware.md).
+Permanent 12V battery feed (B+), ground, ACC and IGN signals on M67 terminals
+1/2/3/4 `[VERIFIED: 2015 Leaf NAM SM, AV-538/AV-590]`. Details and pinout:
+[pinout.md](pinout.md). Key constraint: standby power draw compatible with
+the small 12V battery — see [hardware.md](hardware.md).
 
 ### 2. Vehicle bus (EV-CAN)
 
-The TCU talks to the VCM, the traction battery (HVBAT) and the on-board
-charger (OBC) on the EV-CAN `[TO CONFIRM: MyNissanLeaf community
-documentation]`. Frame IDs, bitrate and exact tap point: `[TBD]`.
+The TCU sits on the EV-CAN, available directly on **M67 terminals 9 (CAN H)
+and 10 (CAN L)** `[VERIFIED: 2015 Leaf NAM SM, AV-538]` — so power, ignition
+sensing and the vehicle bus all come through the one connector the original
+TCU already uses. VCM / HVBAT / OBC dialogue details, frame IDs and bitrate:
+`[TO MEASURE: sniff at M67]`.
 
 ### 3. Cellular (LTE)
 

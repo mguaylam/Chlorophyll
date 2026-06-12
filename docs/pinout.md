@@ -1,54 +1,92 @@
 # Connectors and pinout
 
-> **Warning: nothing on this page is verified against the actual vehicle.**
-> Every value must be cross-checked in the AZE0 service manual and measured
-> with a multimeter before wiring anything. A wiring error on M67 can damage
-> the TCU, the harness, or worse.
+Primary source: **2015 Leaf NAM service manual** (AM-0ZE0-U0-0002-15,
+revision June 2014), sections AV and PG — owned copy, not redistributed here.
+Facts below cite the manual page. `[VERIFIED: SM AV-xxx]` means read directly
+from the manual; a multimeter check before first wiring is still recommended
+(harness variations, model-year drift).
 
-Vehicle: Nissan Leaf AZE0, model year 2015. Original TCU: type GNOV1N,
+Vehicle: Nissan Leaf AZE0, MY2015 (NAM). Original TCU: type GNOV1N,
 SW 06.42R, HW 95048, Continental `[VERIFIED: owner's unit label]`.
 
-## M67 — power connector
+## M67 — TCU main connector (white, 40-pin)
 
-`[TO CONFIRM: service manual — to be cross-checked, then [TO MEASURE:
-multimeter, with connector unplugged then live]]`
+`[VERIFIED: SM AV-538 (signal table), AV-590 (voltage checks), PG-53
+(connector list "M67 W/40: TCU")]`
 
-| Pin | Signal | Notes |
+| Terminal | Wire | Signal | Notes |
+|---|---|---|---|
+| 1 | W | B+ | Battery voltage at all times, 9–16 V |
+| 2 | B | GND | Continuity to body ground |
+| 3 | L | ACC | 12 V with power switch in ACC |
+| 4 | W | IGN | 12 V with power switch ON |
+| 9 | L | **EV CAN H** | Direct EV-CAN access at the TCU |
+| 10 | G | **EV CAN L** | |
+| others | — | not connected / unlabeled | `[VERIFIED: SM AV-538 — listed as "–"]` |
+
+Fuses `[VERIFIED: SM AV-590 (assignment), AV-529 (ratings in wiring
+diagram)]`:
+
+| Supply | Fuse # | Rating |
 |---|---|---|
-| 1 | BAT +12V (permanent) | `[TO CONFIRM]` `[TO MEASURE]` |
-| 2 | GND | `[TO CONFIRM]` `[TO MEASURE]` |
-| 3 | ACC | `[TO CONFIRM]` `[TO MEASURE]` |
-| 4 | ON (ignition) | `[TO CONFIRM]` `[TO MEASURE]` |
+| BAT (term. 1) | 34 | 20 A |
+| ACC or ON (term. 3) | 19 | 10 A |
+| ON (term. 4) | 3 | 10 A |
 
-Associated fuses: **34 / 19 / 3** `[TO CONFIRM: service manual — identify
-which fuse protects which line, and their ratings: [TBD]]`.
+**Design consequence**: power, ignition sensing and EV-CAN are all available
+on this single connector — a replacement TCU can use M67 alone for Phase 1.
 
-## M68 — USB connector to the AV unit
+## M68 — TCU USB/voice connector to the AV unit (gray, 17-pin)
 
-`[TO CONFIRM: service manual]`
+`[VERIFIED: SM AV-538 (TCU side), AV-540 (AV unit side), AV-587 (continuity
+mapping)]`
 
-Terminal mapping `[TO CONFIRM]`:
+USB link (TCU M68 ↔ AV unit M97 without Bose / M104 with Bose):
 
-| TCU terminal | AV unit terminal | Signal |
-|---|---|---|
-| 47 | 62 | `[TBD]` |
-| 48 | 61 | `[TBD]` |
-| 55 | 70 | `[TBD]` |
-| 56 | 69 | `[TBD]` |
+| TCU term. | Wire | Signal | AV term. | AV signal |
+|---|---|---|---|---|
+| 47 | BR | VBUS | 62 | USB VBUS |
+| 48 | L | D− | 61 | USB D− |
+| 55 | SHIELD | GND | 70 | USB GND |
+| 56 | R | D+ | 69 | USB D+ |
 
-Which pair carries D+/D−, which is VBUS/GND (if present), shielding: `[TBD —
-service manual + multimeter]`.
+Separate analog voice channel on the same connector
+`[VERIFIED: SM AV-538/AV-540]`: TCU 41 (U VOICE) ↔ AV 68 (U-VOICE),
+TCU 49 (D VOICE) ↔ AV 76 (D-VOICE), TCU 42 (VOICE GND) ↔ AV 67 (GND),
+TCU 46 ↔ AV 63 ("MANUFACTURE SPECIFIC"), TCU 57 = connector chassis ground.
 
-## M113 — TEL antenna
+Who supplies VBUS (i.e. which side is USB host): `[TO MEASURE: voltage on
+TCU 47 with TCU unplugged — if the AV unit drives 5 V, the AV unit is host]`.
 
-- Connector: M113, terminals **58/59** `[TO CONFIRM: service manual]`.
-- Connector type: Hirose **GT16** `[TO CONFIRM]`.
-- Antenna usable for LTE (bands, VSWR): `[TBD — see hardware.md]`.
+Related DTC: U1A05 "USB COMM" = USB communication failure between TCU and AV
+control unit `[VERIFIED: SM AV-587]`.
 
-## To verify
+## M113 — TEL antenna feeder
 
-- [ ] M67 pinout (4 pins) `[TO MEASURE: multimeter]`
-- [ ] Role and rating of fuses 34/19/3 `[TO CONFIRM: service manual]`
-- [ ] M68 47/48/55/56 ↔ 62/61/70/69 mapping and USB signal assignment `[TO CONFIRM]`
-- [ ] Hirose GT16 connector on M113 `[TO CONFIRM]`
-- [ ] Antenna behavior in LTE bands `[TO MEASURE: VNA/VSWR if possible]`
+`[VERIFIED: SM AV-588/AV-589]`
+
+- Terminals **58/59**, coaxial feeder to the roof TEL antenna.
+- Antenna-detection bias: terminal 58 reads **2.8 V** to ground with the
+  feeder disconnected and power ON; a short raises DTC **U1A07**, an open
+  feeder raises **U1A08** (TEL ANTENNA NO CONN). A replacement TCU that
+  reuses this feeder should reproduce a plausible load, or those DTCs are
+  the TCU's own business and disappear with it `[TBD: whether anything else
+  monitors the antenna]`.
+- Connector type Hirose GT16: `[TO CONFIRM — not stated in the SM pages read;
+  came from upstream/forums]`.
+- Antenna usable for LTE bands: `[TO MEASURE — see hardware.md]`.
+
+## Related TCU DTCs (for reference)
+
+`[VERIFIED: SM AV-585..589]`: U1A03 SIM card unreadable, U1A04 VIN not
+written (VIN is written via CONSULT after TCU replacement — relevant when
+swapping units), U1A05 USB comm, U1A07 TEL antenna short, U1A08 TEL antenna
+not connected.
+
+## Still to verify
+
+- [ ] Multimeter sanity check of M67 1/2/3/4 before first wiring `[TO MEASURE]`
+- [ ] VBUS direction on M68 (USB host side) `[TO MEASURE]`
+- [ ] M113 connector type (Hirose GT16?) `[TO CONFIRM]`
+- [ ] EV-CAN bitrate and frame IDs visible at M67 9/10 `[TO MEASURE: CAN
+  sniffer on the TCU connector]`
