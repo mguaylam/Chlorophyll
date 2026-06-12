@@ -19,8 +19,13 @@
   Bell/Telus/Rogers `[TO CONFIRM: SIMCom datasheet + carrier band lists]`.
 - Modem standby/PSM consumption — dominates the power budget `[TO CONFIRM:
   datasheet, then [TO MEASURE]]`.
-- Remote wake-up: persistent TCP? SMS? push via modem URC? Depends on the
-  protocol (see [protocol-server.md](protocol-server.md)) `[TBD]`.
+- Remote wake-up is **SMS-based** in OpenCARWINGS (the server texts the SIM,
+  the TCU then phones home) `[VERIFIED: opencarwings@3927dad — see
+  protocol-server.md]`. Consequence: the modem must receive SMS while the
+  system sleeps (modem registered, ESP32 in deep sleep, wake on modem RI/URC
+  pin), **and the SIM plan must include inbound SMS** `[TO CONFIRM: plan]`.
+  Registered-idle modem consumption is therefore the critical figure
+  `[TO MEASURE]`.
 
 ## Power budget
 

@@ -36,8 +36,9 @@ Details: [docs/architecture.md](docs/architecture.md)
 ## Roadmap
 
 - **Phase 0** — Python client for the server protocol, tested against
-  OpenCARWINGS' `test_server.py`. Zero hardware: validate the protocol
-  understanding (port 55230, packets, auth) before touching a soldering iron.
+  `scripts/test_server.py` from the nissan-leaf-tcu repo and a local
+  OpenCARWINGS server. Zero hardware: validate the protocol understanding
+  (port 55230, packets, auth) before touching a soldering iron.
 - **Phase 1** — ESP32-S3 + LTE hardware: remote A/C, charge control,
   telemetry (SOC, range) over EV-CAN. The bare minimum to get the app
   features back.
