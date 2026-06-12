@@ -1,0 +1,12 @@
+[project]
+name = "chlorophyll-carwings"
+version = "0.0.1"
+description = "Reference Python client for the CARWINGS TCU<->server protocol (Phase 0)"
+requires-python = ">=3.11"
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
