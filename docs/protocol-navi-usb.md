@@ -11,9 +11,20 @@ Internal link between the TCU and the AV (navigation) unit. **Phase 2**
 
 - USB **1.0** (low/full speed: `[TBD]`) through the M68 connector
   `[TO CONFIRM: service manual]`. Pinout: [pinout.md](pinout.md).
-- USB role on each side (who is host: the AV unit or the TCU?):
-  `[TBD — determines whether the ESP32-S3 must act as device or host]`.
-- USB class: CDC (virtual serial port) `[TO CONFIRM: nissan-leaf-tcu repo]`.
+- **The USB peripheral is integral to the TCU's baseband SoC** (Infineon
+  PMB8876 / **SGOLD2**), not a separate chip: the firmware carries the full USB
+  stack (`3p_usb_ems/.../physical/arch/sgold/...`) `[VERIFIED: firmware strings
+  + decomp]`. The original TCU unified cellular + USB-to-navi + GPS in one SoC,
+  while the S12 did CAN. In Chlorophyll these split: the navi USB is driven by
+  the **ESP32-S3 native USB OTG**, cellular by the separate LTE modem.
+- USB role: the firmware uses the USB **function** (device) HAL
+  (`usb/func/hal/...`), so the **TCU is the USB device and the AV unit is the
+  host** `[TO CONFIRM: firmware uses the device-side stack — confirm with a
+  capture]`. Consequence: the ESP32-S3 must act as a USB **device**, not host.
+- USB class: **CDC** (virtual serial), exposed as `USBCDC` with two ports
+  (`/USBCDC/0`, `/USBCDC/1`) `[VERIFIED: firmware strings — USBCDC device]`.
+  The `+XNAD` AT traffic rides over this CDC link `[TO CONFIRM: which of the two
+  CDC ports]`.
 
 ## Command layer
 
@@ -75,7 +86,9 @@ Validation plan:
 ## To verify
 
 - [ ] Actual USB speed (low/full speed) `[TO MEASURE: logic analyzer]`
-- [ ] Host side of the link `[TBD]`
-- [ ] USB class / descriptors of the original TCU `[TO MEASURE: USB capture]`
+- [x] Host side of the link — firmware uses the USB device (function) stack, so
+  TCU = device / AV unit = host `[TO CONFIRM: capture]`
+- [ ] USB descriptors (VID/PID, the two CDC ports' roles) `[TO MEASURE: USB
+  capture]` — class is CDC `[VERIFIED: firmware]`
 - [ ] Inventory of `+XNAD_*` commands `[TBD]`
 - [ ] AV unit behavior without a TCU `[TO MEASURE]`
