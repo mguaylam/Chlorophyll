@@ -40,6 +40,24 @@ Observed syntax patterns in the strings: `AT+XNADFS=`, `AT+XNADFS?`,
 consistent with a standard AT command grammar
 `[VERIFIED: firmware strings]`.
 
+## Decompilation note (Ghidra)
+
+Decompiling the `+XNAD` references (SW 06.42R) confirms `XNAD` is a substantial
+subsystem with its own task and mailbox (`XNAD_TASK`, `XNAD_mbox`,
+`XNADAT_INFO_IND`) `[VERIFIED: decomp]`. The call-control commands are **real
+handlers**, not just format strings: `+XNAD_Ecall_*`, `+XNAD_ACNcall_*`,
+`+XNAD_servicecall_*` each have `start_request` / `end_request` /
+`go_to_voice` / `go_to_data` handling decompiled at `@0xA02CDDE4` and around
+`@0xA02F606C..0xA02F9834` `[VERIFIED: decomp]`. There are also
+`+XNADPIDAT:` / `+XNADPIDCTRL:` handlers (`@0xA0309644`, `@0xA03098F8`).
+
+This still does **not** resolve the transport question (USB to the AV unit vs an
+internal baseband interface): `NAD` = Network Access Device (the modem side), so
+part of the `+XNAD` family is clearly modem/eCall control, while
+`+XNAD_DCM_Params_*` / `+XNAD_NAVI_Info_sent` may be the AV-unit-facing part. The
+split between "to the navi" and "to the modem" remains `[TO CONFIRM:
+USB capture]`.
+
 ## Emulation strategy (Phase 2)
 
 The ESP32-S3 has a native USB OTG controller (host or device)

@@ -38,6 +38,12 @@ always-on controller (S12/PIC) for power management and wake-up
   periodic wake-up timer.
 - `AT+XPOW=[<mode>],[<timeout>],[<num_sp>]` — modem sleep/power control.
 - `BAT_UNDERVOLTAGE_TEST_INTERVAL_FACTOR` — periodic 12V undervoltage check.
+- Modem (NAD = Network Access Device) wake budget is itself coded:
+  `CODING_ID_POW_MAX_NAD_ACTIVATIONS` (a cap on how many times the modem may
+  be woken) and `CODING_ID_POW_NAD_ALWAYS_ON_MAX_TIME` (logged in **minutes**)
+  `[VERIFIED: decomp @0xA02E6A50]`. So the factory design explicitly bounds
+  modem-on time and wake count to protect the 12V battery — the same trade-off
+  Chlorophyll faces between SMS-reachability and standby drain.
 
 Design lesson for Chlorophyll: mirror this — ESP32-S3 in deep sleep, woken by
 (a) ACC interrupt, (b) a periodic timer, (c) modem RI on inbound SMS — rather
