@@ -80,14 +80,81 @@ server instead.
   `EvChargeApp`, `EvChargeStatusApp`, `EvPluginRmdApp`, `EvStopRmdApp`,
   `EvConfigApp` `[VERIFIED: firmware strings]`.
 
-## What would need disassembly (not strings)
+## Decompilation findings (Ghidra)
 
-The binary is ARMv5t LE, so Ghidra/objdump could in principle recover:
+Done with Ghidra 12.1.2 headless on `application.bin`. Load base determined as
+**`0xA0020000`** by correlating 32-bit literal-pool words against string offsets
+(5183 hits vs 478 for the next candidate — a 10x margin)
+`[VERIFIED: derived from literal-pool↔string correlation]`. Language
+`ARM:LE:32:v5t`. Functions below are named by the FW debug strings they
+reference.
 
-- The **app↔S12 internal message format** — which EV data points the app
-  requests from the CAN MCU. This could *indirectly* reveal what telemetry
-  exists, though still not the raw CAN IDs `[TBD]`.
-- Default coding values (report intervals, wake times) `[TBD]`.
-- Corroboration of the exact GDC body bit-packing `[TBD]`.
+### app → S12: the `requestCanAction` IPC message
 
-These are heavier tasks; none are blocking for Phase 0/1.
+`EvAcApp: send can active to S12` decompiles (`@0xA02F502C`) to an IPC send of a
+**6-byte message**, not a CAN write:
+
+- opcode byte **`0x85`**, an **active/inactive flag** (`1` = active), plus
+  parameters and a status byte, sent via `requestCanAction - send via IPC`
+  to the S12; on failure logs `requestCanAction - sendMessage failed`.
+- Each EV app has its own active/inactive pair: `EvAcApp`, `EvChargeApp`,
+  `EvChargeStatusApp`, `EvPluginRmdApp`.
+
+`[VERIFIED: Ghidra decomp @0xA02F502C — 6-byte IPC msg, opcode 0x85, active
+flag]`. This confirms the architecture: the app issues **high-level CAN-action
+requests** to the S12; it never names raw CAN IDs. So the IDs stay in the S12,
+which is not in this dump (see below).
+
+### S12 → app: status notification channel
+
+`@0xA0438600` is a dispatcher over a subtype byte for status the S12 pushes
+back: `Sensor 1/2`, `HSD1_S12_STATUS` / `HSD2_S12_STATUS` (high-side driver
+outputs), `DIG_OUT_S12_STATUS`, `HVAC_ON_STATUS`
+`[VERIFIED: decomp @0xA0438600]`. This is the **GPIO / power-output / HVAC
+state** channel — not the rich battery telemetry (SOC/GIDs), which travels as a
+data response to a CAN-action request on a different path `[TO CONFIRM:
+deeper decomp]`.
+
+### Reporting intervals — units confirmed, defaults not in code
+
+`AcpEvHisReporter::onCodingSrvCodingChanged` (`@0xA02947E0`) reads each value
+from the coding store and applies fixed unit conversions
+`[VERIFIED: decomp @0xA02947E0]`:
+
+- `repInterval*`: coding value **× 60** → stored as seconds, so the coding is in
+  **minutes**.
+- `repTimeoutFact`: **× 1000** → seconds to milliseconds.
+- `perWakeupTime`: a `ushort`, used directly.
+
+The **default numeric values are not in the binary** — they live in the
+coding/NVM partition and are read at runtime `[TBD: coding/NVM partition, not in
+application.bin]`.
+
+### The S12 firmware is not in this dump, and the host can't flash it
+
+The host only ever talks to the S12 over IPC and writes a few **EEPROM
+parameters** (`Write First LogZone to S12`, `Re-Initial S12 EEPROM and write
+Signature`, HW part number / version / programming date). There is **no S12
+application image and no S12 flashing/download routine** in the dump; the lone
+`reflash` string is the baseband's own recovery mode
+(`RecoverySrv:: enter reflash mode, stop GSM/GPRS`)
+`[VERIFIED: strings + decomp]`. Consequence: the S12's CAN IDs and bitrate
+cannot be recovered from the published dump — only by reading the S12 chip
+itself (hardware, likely flash-secured) or by **live CAN sniffing** (the
+practical path).
+
+## Toolchain
+
+Ghidra 12.1.2 headless is set up locally (`~/ghidra`, JDK 25) and driven from
+scripts (`tools/ghidra_scripts/XrefDecompile.java`: keyword → string xref →
+decompile). The Ghidra project lives under `tools/ghidra_proj/` (gitignored —
+it embeds the proprietary binary). Capstone is also available for quick
+disassembly without a full Ghidra import.
+
+## What would still need deeper work
+
+- The **EV telemetry data path** (how SOC/GIDs/SOH come back from the S12) —
+  partially mapped; the rich-data response handler is not yet decompiled `[TBD]`.
+- Corroboration of the exact GDC body bit-packing against the encoder `[TBD]`.
+- The `+XNAD` navi handler (Phase 2) — functions captured, not yet analyzed
+  `[TBD]`.

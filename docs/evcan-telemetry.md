@@ -38,6 +38,52 @@ sourced from one or more CAN frames.
 | `range_acon` / `range_acoff` | Estimated range | VCM (or computed) |
 | `ignition`, `parked`, `direction_forward` | Power state, gear | VCM |
 
+## Signals the original TCU actually consumes (firmware-derived)
+
+The original TCU's firmware names every EV-CAN-derived value it reads, in debug
+strings prefixed `EVCAN:` and in the report-assembly dumper (`@0xA02F2AC0`,
+section `Evcan`). This is the **authoritative target list** — what the factory
+TCU reports — recovered by decompilation, not community guesswork. It does *not*
+give the raw CAN IDs (those live in the S12 companion MCU, not in this dump —
+see [firmware-findings.md](firmware-findings.md)), but it tells us exactly which
+signals to look for when sniffing. `[VERIFIED: Ghidra decomp @0xA02F2AC0 +
+EVCAN strings, SW 06.42R]`
+
+Telemetry values (the `Evcan` block, in firmware field order):
+
+| FW name | Meaning | Notes |
+|---|---|---|
+| `LbSoc` | Li-ion battery SOC | logged as float "original value %f" → scaled to int `[TO CONFIRM: scale factor]` |
+| `LbSoh` | State of health | |
+| `LbCapr` | Remaining capacity | "original value" scaled |
+| `LbFullcap` | Full capacity | "original value" scaled |
+| `fullCapSeg` / `realCapSeg` | Capacity segments (battery bars) | |
+| `ChgSta` | Charge status | |
+| `Qccondet` | Quick-charge (CHAdeMO) connector detected | |
+| `ChargeTime100v` / `ChargeTime200v` / `Charge_time_200v6kw` | Charge time estimates | per charge level |
+| `Charge_option_6kw` | 6 kW OBC option | |
+| `Heat_start_stop_exist` / `heatingExist` | Battery heater present | |
+| `VcmStatus` | VCM status | |
+| `VcmShift` | Gear / shift position | |
+| `PriAcDcm` | Remote (pre-)A/C state | |
+| `Acvoljudg` | A/C voltage judgement | |
+| `AcExpectSum` | A/C expected consumption sum | |
+| `ave ele cmp ac ON/OFF` | Avg electricity consumption, A/C on/off | mileage/range calc inputs |
+| `mileage_acon` / `mileage_acoff` | Mileage (odometer) | from EVCAN |
+
+Result/event fields (the `Application` block): `error_notification`,
+`not_plugin_alert`, `charge_stop`, `charge_request_res`, `pri_ac_request_res`,
+`pri_ac_stop_result`, `bat_heat_start_stop` `[VERIFIED: decomp @0xA02F2AC0]`.
+
+Control direction (TCU → bus, for Phase 1 TX): the firmware logs
+`send charge request to EVCAN`, `send DCM_PRI_ACON to EVCAN` (remote A/C on),
+and `Control EVCAN via line to VCM` `[VERIFIED: EVCAN strings]`. Mechanism and
+frame contents still `[TO MEASURE: sniff]`.
+
+This list maps onto the GDC body fields above; the mapping FW-name → GDC-field
+is direct for SOC/SOH/charge/AC. The remaining unknown is **which CAN ID carries
+each** — the table below is the (unverified) community hypothesis to confirm.
+
 ## Candidate frames to verify
 
 **Do not trust offsets/scaling here — confirm each against a cross-checked

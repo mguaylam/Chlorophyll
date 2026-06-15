@@ -50,3 +50,11 @@ Thumbs.db
 *.pcapng
 dumps/
 captures/
+
+# --- Reverse-engineering workspace (embeds the proprietary binary) ---
+# Ghidra project DB and any decompiled output stay local; only original
+# scripts under tools/ghidra_scripts/ are tracked.
+tools/ghidra_proj/
+*.gpr
+*.rep
+decomp_*.txt
