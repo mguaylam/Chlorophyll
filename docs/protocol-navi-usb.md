@@ -28,6 +28,20 @@ Internal link between the TCU and the AV (navigation) unit. **Phase 2**
   (`/USBCDC/0`, `/USBCDC/1`) `[VERIFIED: firmware strings — USBCDC device]`.
   The `+XNAD` AT traffic rides over this CDC link `[TO CONFIRM: which of the two
   CDC ports]`.
+- **Logical-channel routing is configurable (`+XSIO`)**: the firmware multiplexes
+  three logical channels — **AT**, **Trace**, **Other** — onto the physical ports
+  (`UART0..2`, `USB0`, `USB1`) per a numbered variant table, e.g.
+  `Variant=0: AT=UART0,USB1; Trace=USB0; Other=UART1,UART2` …`Variant=5: AT=USB0,USB1`
+  `[VERIFIED: firmware strings, 7 variants]`. A port-name→index resolver
+  (`@0xA037F9B8`) maps the configured name to a slot: `/USBCDC/0`→0, `/USBCDC/1`→1,
+  `/app/1`→2, else 3 `[VERIFIED: decomp @0xA037F9B8]`. So **which CDC port carries
+  the navi AT traffic is set by coding, not hardwired** — the active `+XSIO`
+  variant must be read from a live unit `[TO MEASURE: +XSIO? on a running TCU]`.
+- **USB descriptors are built at runtime, not stored as a blob**: a scan of the
+  dump for a static device descriptor (`0x12 0x01` + plausible bcdUSB/VID/PID)
+  finds **none** `[VERIFIED: binary scan, 0 hits]`. Consequence: **VID/PID,
+  endpoint map and the two CDC ports' interface numbers (`USBIfc0..5`) cannot be
+  read from the dump** and remain `[TO MEASURE: USB capture]`.
 
 ## Command layer
 
@@ -102,6 +116,35 @@ part of the `+XNAD` family is clearly modem/eCall control, while
 split between "to the navi" and "to the modem" remains `[TO CONFIRM:
 USB capture]`.
 
+## Navi presence is gated by the `AUDIO_TYPE` coding
+
+The TCU only expects a navigation unit when its `AUDIO_TYPE` coding says so.
+`AudioManagement` reads the `AUDIO_TYPE` value from NVM and decodes bits **[3:2]**
+(`(val & 0xf) >> 2`) into one of four system types (`@0xA02F8CC4`)
+`[VERIFIED: decomp @0xA02F8CC4]`:
+
+| Decoded value | System type | Internal mode byte |
+|---|---|---|
+| 0 | `TYPE_NON_NAVI_SYSTEM` | 0 |
+| 1 | audio system (no BTHF) | 3 |
+| 2 | audio system (BTHF) | 1 |
+| 3 | `TYPE_NAVI_SYSTEM_USB` (requires a BTHF flag set) | 2 |
+
+Consequently the **`NAVI_ID` is only required when the unit is coded as
+`TYPE_NAVI_SYSTEM_USB`**. The server-message content validators check identity in
+a fixed order — VIN → DCM_ID → (NAVI_ID *only if navi-type*) → ICCID — and
+otherwise log `No need to check NAVI ID because the current audio type is not
+TYPE_NAVI_SYSTEM_USB` `[VERIFIED: decomp @0xA02BF9DC, @0xA02ED610, @0xA031A338]`.
+Error codes returned by these validators: **`0x17` = no VIN, `0x05` = missing
+DCM_ID / NAVI_ID / content error, `0x1B` = authentication failure**
+`[VERIFIED: decomp]`.
+
+What this means for emulation: to make the original AV unit + TCU pair behave as a
+navi system, the coded `AUDIO_TYPE` must select navi, and the TCU must hold a
+valid `NAVI_ID` (14 bytes, coding `0x27`). A replacement that wants to **omit**
+the navi can leave `AUDIO_TYPE` non-navi and the `NAVI_ID` check is skipped
+entirely `[VERIFIED: decomp]`.
+
 ## Emulation strategy (Phase 2)
 
 The ESP32-S3 has a native USB OTG controller (host or device)
@@ -122,6 +165,12 @@ Validation plan:
 - [x] Host side of the link — firmware uses the USB device (function) stack, so
   TCU = device / AV unit = host `[TO CONFIRM: capture]`
 - [ ] USB descriptors (VID/PID, the two CDC ports' roles) `[TO MEASURE: USB
-  capture]` — class is CDC `[VERIFIED: firmware]`
-- [ ] Inventory of `+XNAD_*` commands `[TBD]`
+  capture]` — class is CDC `[VERIFIED: firmware]`; descriptors are built at
+  runtime, **not** a static blob in the dump `[VERIFIED: binary scan, 0 hits]`
+- [ ] Active `+XSIO` variant on a live unit — decides which CDC port carries the
+  AT/navi channel `[TO MEASURE: +XSIO? on a running TCU]`
+- [x] `+XNAD_*` command inventory and `DCM_Params` grammar — recovered from the
+  dump (see grammar table above) `[VERIFIED: decomp]`
+- [x] What gates the `NAVI_ID` requirement — the `AUDIO_TYPE` coding (navi vs
+  non-navi) `[VERIFIED: decomp @0xA02F8CC4]`
 - [ ] AV unit behavior without a TCU `[TO MEASURE]`
