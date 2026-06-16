@@ -149,6 +149,40 @@ cannot be recovered from the published dump — only by reading the S12 chip
 itself (hardware, likely flash-secured) or by **live CAN sniffing** (the
 practical path).
 
+### CARWINGS authentication — and why our client already covers it
+
+The dump has two distinct authentication mechanisms. Only the first is required
+to interoperate with OpenCARWINGS.
+
+**1. Mandatory: connect-time password + in-message PIN/PWD block.** The outgoing
+auth block is built by `fill authentication` (`@0xA02D1394`): a flags byte, then
+a **16-byte PIN** and a **16-byte PWD** field (each length-prefixed)
+`[VERIFIED: decomp @0xA02D1394]`. This is the layer our Phase-0 client already
+produces — the CRC-32 password hash (`password + "evtelematics"`) plus the
+user/pass auth block (`tools/carwings`, `AUTH_OFFSET`), **validated against
+OpenCARWINGS for known vectors**.
+
+**2. Optional: per-message HMAC integrity (`isAuthOK`, `@0xA02ECE70`).** A
+**two-stage keyed-hash** scheme `[VERIFIED: decomp @0xA02ECE70]`:
+
+- *Stage 1 (session-key derivation):* `HMAC(authKey[20 B], nonceBlock[14 B]) →
+  sessionKey[32 B]`. The 14-byte block is assembled from server/client nonce
+  material (`clientNonce`, `NextNonce`, `Failed to generate server nonce`); a
+  constant `0x7DA` (= 2010) is mixed in.
+- *Stage 2 (message MAC):* `HMAC(sessionKey[32 B], messageBody) → tag`; the **first
+  8 bytes** are compared (`ksr` received vs `ksc` computed).
+- The 32-byte outputs point to a **SHA-256-family** primitive `[TO CONFIRM:
+  exact hash — output size says SHA-256, not yet pinned]`. The whole layer is
+  gated by `ENABLE_AUTHENTICATION` and a build flag (`Get/Set Authentication Key
+  is not supported in this build!`) `[VERIFIED: strings]`.
+
+**Conclusion for Chlorophyll:** the per-message HMAC is **not required** by
+OpenCARWINGS — the Phase-0 client connects and exchanges INIT/DATA with only the
+CRC-32 password + PIN/PWD block, no session key, no HMAC. So Phase 1 needs **no
+session-key derivation and no HMAC implementation** `[TO CONFIRM: that the server
+never enforces HMAC in any mode — strong evidence is the working client, not a
+server-code audit]`. This removes crypto from the Phase-1 critical path.
+
 ## Toolchain
 
 Ghidra 12.1.2 headless is set up locally (`~/ghidra`, JDK 25) and driven from
