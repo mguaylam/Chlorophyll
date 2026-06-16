@@ -47,15 +47,22 @@ Internal link between the TCU and the AV (navigation) unit. **Phase 2**
     (consistent with `/USBCDC/0`, `/USBCDC/1` and `USBIfc0..5`)
     `[VERIFIED: product string]`. So the device is a **CDC composite**, not a
     Nissan-bespoke class.
-  - **The numeric descriptors (VID/PID, bcdUSB, endpoint map) are built in code,
-    not stored as a blob**: a byte scan for a static device descriptor
-    (`0x12 0x01`, even with composite-class / valid-`bMaxPacketSize` /
-    `bNumConfigurations==1` constraints) finds **none**
-    `[VERIFIED: binary scan, 0 hits]`. They are immediates in the descriptor
-    builder (reached via a pointer table, so a string-xref does not land on it).
-    The exact **VID/PID remain `[TO MEASURE: USB capture]`** — though, being a
-    Comneon reference stack, they are likely the Comneon/Infineon defaults rather
-    than Nissan-specific.
+  - **Active configuration string: `cfg1: ACM w/ BULK and Dbg/Trc`**
+    `[VERIFIED: UTF-16LE string @0x126FDC]`. So the data path uses **BULK
+    endpoints** (CDC-ACM), and there is a **Debug/Trace interface** alongside the
+    two CDC ports. Manufacturer is `Comneon GmbH Co KG`.
+  - **OS-level device files** registered with per-port params (3000 ms timeouts):
+    `USBDev`, `USBCtrl`, `USBOtg`, `USBIfc0..5` — i.e. up to **6 interface
+    endpoints** `[VERIFIED: registration table @0x472150]`.
+  - **The descriptors are a Comneon object tree relocated to RAM** (`0xb0……`
+    pointers), assembled at boot by `FUN_a00BE004` via object constructors
+    (`@0xA0243454`, `@0xA0242270`); the UTF-16 name strings live in flash but the
+    **numeric fields (VID/PID, bcdUSB, endpoint addresses) are produced by those
+    constructors, not stored as a readable blob** `[VERIFIED: decomp
+    @0xA00BE004 + binary scans, 0 static-descriptor hits]`. Extracting the exact
+    **VID/PID would require decompiling several more constructor layers**; until
+    then it stays `[TO MEASURE]` — though, being a Comneon reference stack, it is
+    most likely a Comneon/Infineon default rather than Nissan-specific.
 
 ## Command layer
 
