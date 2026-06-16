@@ -205,6 +205,84 @@ session-key derivation and no HMAC implementation** `[TO CONFIRM: that the serve
 never enforces HMAC in any mode — strong evidence is the working client, not a
 server-code audit]`. This removes crypto from the Phase-1 critical path.
 
+## Platform nature & shared baseband
+
+The AT-command parser carries a full feature-phone command set
+(`ATC_SAMSTEST1..99`, `ATC_CAMERA`, `ATC_MP3`, `ATC_RINGTONE`, `ATC_MAINLCD`,
+`ATC_SUBLCD`, `ATC_VIBRATOR`, Bluetooth `ATC_BT*`) `[VERIFIED: strings]`. So the
+**baseband firmware is shared with an Infineon/Comneon-based Samsung phone** and
+most of it is dead code for the TCU. The Nissan/Continental telematics layer is
+the **Novanto** application on top. Practical effect: when mining the dump,
+filter to the `ATC_X*` (Infineon extensions) and `Acp*`/`Ev*`/`CImmob*` (Novanto)
+namespaces; the generic 3GPP/phone commands are noise.
+
+## Coding-parameter catalog (the configuration surface)
+
+72 `CODING_ID_*` items configure the unit `[VERIFIED: strings — full list in the
+binary]`. They group into:
+
+- **Power / wake**: `POW_PERIODIC_WAKUP_TIME`, `PERIODIC_WAKEUP_FROM_OFF_MODE`,
+  `POW_MAX_NAD_ACTIVATIONS`, `POW_NAD_ALWAYS_ON_MAX_TIME`, `POWER_MODE`,
+  `NAD_POWER_ACT`, `GPRS_IDLE_TIMEOUT`, `WAITING_TIME_FOR_SMS`,
+  `BAT_UNDERVOLTAGE_TEST_INTERVAL_FACTOR`, `VEHICLE_BATTERY_UNDERVOLTAGE`.
+- **EV/telematics reporting**: `EVT_HISTORY_REPORTING_INTERVAL_IGN_ON`,
+  `EVT_HISTORY_REPORTING_INTERVAL_FACTOR_IGN_OFF`,
+  `EVT_HISTORY_REPORTING_TIMEOUT_FACTOR`, `AUDIO_TYPE` (navi gating),
+  `TCU_ACTIVATED`, `SESSION_ID_VAS`, `VAS_CHKTMR_THRESHOLD`.
+- **Backup battery (BUB)**: `BUB_EQUIPPED`, `BUB_UNDERVOLTAGE`,
+  `BUB_OVER_TEMPERATURE`, `BUB_TEMP_TEST_PERIOD`, `BUB_COOL_DOWN_TIME`, alarms.
+- **GPS/GSM antenna supervision**: `GPS_*ANT*`, `GSM_ANTENNA_TEST_INTERVAL_FACTOR`,
+  `*_ANT_TAMP_ALARM*`, `TAMPERING_*`.
+- **Anti-theft / SVT (Stolen-Vehicle Tracking)**: `ALARM_ANTI_THEFT_MONITORED`,
+  `ALARM_GEO_FENCE_ENABLED`, `ALARM_HIJ_BUTTOM_ENABLED`, `HIJ_BUTTON_ENABLED`,
+  `ACC_*` (acceleration/movement profiling), `AUTONOMOUS_BLOCKING_ALARM_WARNING`,
+  `IML_OUTPUT_ENABLED` (the immobilizer HW line — see below).
+- **Thermal/diag**: `TCU_OVERTEMPERATURE`, `TCU_TEMP_TEST_INTERVAL_FACTOR`,
+  `OPEN_CIRCUIT_DETECT_ENABLED`, various `*_ALARM_WARNING` event toggles.
+
+These confirm the platform is a Continental **anti-theft / stolen-vehicle
+tracker** repurposed for CARWINGS. For Chlorophyll, almost all of these are
+**out of scope** (anti-theft, BUB, antenna tamper) — the relevant few are the
+power/wake and reporting-interval coding, whose **default values live in NVM, not
+the binary** `[TBD: read from a live unit's coding]`.
+
+## Reporting trigger logic (`AcpEvHisReporter`)
+
+`isTimeToSend` (`@0xA02945CC`) decides when to push an EV-history report
+`[VERIFIED: decomp @0xA02945CC]`:
+
+- A **periodic tick timer** drives the check; the cadence differs by ignition
+  state (`repIntervalIgnOn` vs `repIntervalFactIgnOff`, in minutes — see units at
+  `@0xA02947E0`).
+- In **ignition-off**, it computes `time_diff = now − lastIgnOffTime` and reports
+  only while `time_diff ≤ repTimeoutFact`; once that window expires it logs
+  `no - timeout` and **stops reporting** — a deliberate battery-protection cutoff
+  after the car is parked.
+- Otherwise it returns `yes` (send). The immediate-send-on-change path exists too
+  (`yes - even if at least one d…`).
+
+Design lesson: the factory does **not** report indefinitely while parked — it
+reports on a timer for a bounded window, then goes silent. Chlorophyll should
+mirror this for the <5 mA standby goal (see [hardware.md](hardware.md)).
+
+## Modem power control (`AT+XPOW`) and wake budget
+
+The modem's own sleep/power command is **`AT+XPOW=<mode>,<timeout>,<num_sp>`**
+with ranges `mode (0–5)`, `timeout (0–65535)`, `num_sp (0–…)`
+`[VERIFIED: decomp @0xA0245464 — XPOW handler grammar]`. Combined with the coded
+wake budget (`POW_MAX_NAD_ACTIVATIONS`, `POW_NAD_ALWAYS_ON_MAX_TIME` in minutes,
+`@0xA02E6A50`), this is how the factory bounds modem-on time. For Chlorophyll
+this informs how to drive *our* LTE modem's sleep states for the power budget.
+
+## Diagnostic trouble codes the TCU sets
+
+Warning/DTC IDs (`ACP_WID_DTC*`) `[VERIFIED: strings]`: CAN comm error
+(`DTCC`/`DTCCANC`), DCM internal (`DTCDCMI`), GPS antenna/module
+(`DTCGPSA`/`DTCGPSM`), SIM (`DTCSIMC`), temperature (`DTCT`), USB comm
+(`DTCUSBC`), VIN mismatch (`DTCVINN`), plus the Novanto→Nissan DTC mapping layer.
+Not needed for Chlorophyll (no OBD diagnostics), but `DTCC`/`DTCUSBC` confirm the
+TCU actively monitors CAN and USB link health.
+
 ## Toolchain
 
 Ghidra 12.1.2 headless is set up locally (`~/ghidra`, JDK 25) and driven from
