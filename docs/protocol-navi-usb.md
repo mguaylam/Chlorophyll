@@ -37,11 +37,25 @@ Internal link between the TCU and the AV (navigation) unit. **Phase 2**
   `/app/1`→2, else 3 `[VERIFIED: decomp @0xA037F9B8]`. So **which CDC port carries
   the navi AT traffic is set by coding, not hardwired** — the active `+XSIO`
   variant must be read from a live unit `[TO MEASURE: +XSIO? on a running TCU]`.
-- **USB descriptors are built at runtime, not stored as a blob**: a scan of the
-  dump for a static device descriptor (`0x12 0x01` + plausible bcdUSB/VID/PID)
-  finds **none** `[VERIFIED: binary scan, 0 hits]`. Consequence: **VID/PID,
-  endpoint map and the two CDC ports' interface numbers (`USBIfc0..5`) cannot be
-  read from the dump** and remain `[TO MEASURE: USB capture]`.
+- **USB stack = a generic Comneon/Infineon function stack**, partly recoverable:
+  - **String descriptors are in the dump** (UTF-16LE, data section
+    `@~0x54B180`): Manufacturer **`Comneon GmbH`**, Product
+    **`Comneon: 2 CDC and 1 MS.`**, and interface strings `CDC Communication
+    Interface`, `CDC Data Interface`, `CDC Communication-only Interface`, `Trc`
+    `[VERIFIED: UTF-16LE strings]`.
+  - **Interface composition is therefore known: 2 × CDC + 1 × Mass Storage**
+    (consistent with `/USBCDC/0`, `/USBCDC/1` and `USBIfc0..5`)
+    `[VERIFIED: product string]`. So the device is a **CDC composite**, not a
+    Nissan-bespoke class.
+  - **The numeric descriptors (VID/PID, bcdUSB, endpoint map) are built in code,
+    not stored as a blob**: a byte scan for a static device descriptor
+    (`0x12 0x01`, even with composite-class / valid-`bMaxPacketSize` /
+    `bNumConfigurations==1` constraints) finds **none**
+    `[VERIFIED: binary scan, 0 hits]`. They are immediates in the descriptor
+    builder (reached via a pointer table, so a string-xref does not land on it).
+    The exact **VID/PID remain `[TO MEASURE: USB capture]`** — though, being a
+    Comneon reference stack, they are likely the Comneon/Infineon defaults rather
+    than Nissan-specific.
 
 ## Command layer
 
@@ -195,9 +209,11 @@ Validation plan:
 - [ ] Actual USB speed (low/full speed) `[TO MEASURE: logic analyzer]`
 - [x] Host side of the link — firmware uses the USB device (function) stack, so
   TCU = device / AV unit = host `[TO CONFIRM: capture]`
-- [ ] USB descriptors (VID/PID, the two CDC ports' roles) `[TO MEASURE: USB
-  capture]` — class is CDC `[VERIFIED: firmware]`; descriptors are built at
-  runtime, **not** a static blob in the dump `[VERIFIED: binary scan, 0 hits]`
+- [x] Interface composition — **2× CDC + 1× Mass Storage**, a CDC composite
+  device `[VERIFIED: product string descriptor]`
+- [ ] Numeric descriptors (VID/PID, bcdUSB, endpoint map) `[TO MEASURE: USB
+  capture]` — built in code, **not** a static blob `[VERIFIED: binary scan, 0
+  hits]`; likely Comneon/Infineon defaults
 - [ ] Active `+XSIO` variant on a live unit — decides which CDC port carries the
   AT/navi channel `[TO MEASURE: +XSIO? on a running TCU]`
 - [x] `+XNAD_*` command inventory and `DCM_Params` grammar — recovered from the
