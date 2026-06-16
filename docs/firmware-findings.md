@@ -283,6 +283,42 @@ Warning/DTC IDs (`ACP_WID_DTC*`) `[VERIFIED: strings]`: CAN comm error
 Not needed for Chlorophyll (no OBD diagnostics), but `DTCC`/`DTCUSBC` confirm the
 TCU actively monitors CAN and USB link health.
 
+## Connection lifecycle & keepalive
+
+The TCP client is `BspSocket`/`NovSocket` over lwIP `[VERIFIED: strings]`:
+create → **DNS resolve by hostname** (`gethostbyname_async`, `start DNS search
+for >%s<`) → `connect` → `connected successfully`, with a
+`check_socket_timeout_handler` and `ACP_RETRY_MAX_TIMES` retry bound. So the
+server address may be a **hostname**, not only an IP — useful for pointing the
+replacement at a self-hosted OpenCARWINGS by name.
+
+There is an application-level **CARWINGS keepalive**: `AcpKeepAlive` request /
+`AcpKeepAliveReply` (the reply re-checks the vehicle descriptor)
+`[VERIFIED: strings]`. Combined with lwIP `TCP_KEEPALIVE`, this is how long
+sessions stay alive — our client should answer/issue keepalives to hold the
+session, see [protocol-server.md](protocol-server.md).
+
+## GPS source
+
+GPS can come from an **internal modem GPS** (`AT+XLGPOS`, `AT+XLGNMEA` — the
+Infineon location engine), gated by `CODING_ID_GPS_INTERNAL_GPS_EQUIPPED`; if it
+reads 0 the firmware logs `No GPS position available!` `[VERIFIED: strings]`. The
+navi-supplied position (`navi info`, parsed by `EvAcpHandler @0xA02F3A10`) is a
+**separate** path. Whether our AZE0 unit has the internal GPS populated is
+`[TO CONFIRM: read CODING_ID_GPS_INTERNAL_GPS_EQUIPPED on a live unit]`. For
+Chlorophyll, the ESP32 side can supply its own GNSS or rely on the navi feed.
+
+## Provisioning flow (SMS activation)
+
+`AcpConnSetupSrv` provisions the unit over SMS `[VERIFIED: strings]`: a **first
+SMS** carries the `authentication key` (`procFirstSms`), a **second SMS** carries
+GPRS credentials — `APN address`, `APN login`, `APN password` — plus server
+config (`storeRecGprsData`). There are explicit **activation / deactivation**
+requests (`procActReq` / `procDeactReq`). This is why **55230 / the server is not
+hardcoded** (it is provisioned), and matches the type-5 CONFIG packet we decoded.
+The replacement simply hardcodes its own server and skips the SMS-activation
+dance.
+
 ## Toolchain
 
 Ghidra 12.1.2 headless is set up locally (`~/ghidra`, JDK 25) and driven from
@@ -293,8 +329,19 @@ disassembly without a full Ghidra import.
 
 ## What would still need deeper work
 
+The application/protocol layer of this dump is now broadly mined (server
+protocol, auth, power/wake, reporting, navi USB, app↔S12 IPC, coding surface,
+connection/keepalive, provisioning). The remaining gaps are mostly **not in this
+binary**:
+
+- **Raw EV-CAN IDs/bitrate** — in the S12, not the dump → CAN sniffing.
+- **USB physical layer + numeric descriptors (VID/PID)** — built by the Rhapsody
+  C++ stack / need a capture (see [protocol-navi-usb.md](protocol-navi-usb.md)).
+- **Coding/NVM default values** (reporting intervals, wake timers, GPS-equipped,
+  immobilizer-enabled) — in the NVM partition → read from a live unit.
 - The **EV telemetry data path** (how SOC/GIDs/SOH come back from the S12) —
-  partially mapped; the rich-data response handler is not yet decompiled `[TBD]`.
-- Corroboration of the exact GDC body bit-packing against the encoder `[TBD]`.
-- The `+XNAD` navi handler (Phase 2) — functions captured, not yet analyzed
-  `[TBD]`.
+  partially mapped; the rich-data response handler is not yet decompiled `[TBD]`,
+  but the field list is already recovered (see
+  [evcan-telemetry.md](evcan-telemetry.md)).
+- Exact GDC body bit-packing vs the encoder — low value, OpenCARWINGS documents
+  it and the Phase-0 client is validated `[TBD]`.
