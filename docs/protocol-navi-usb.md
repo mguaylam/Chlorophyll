@@ -59,10 +59,24 @@ Internal link between the TCU and the AV (navigation) unit. **Phase 2**
     (`@0xA0243454`, `@0xA0242270`); the UTF-16 name strings live in flash but the
     **numeric fields (VID/PID, bcdUSB, endpoint addresses) are produced by those
     constructors, not stored as a readable blob** `[VERIFIED: decomp
-    @0xA00BE004 + binary scans, 0 static-descriptor hits]`. Extracting the exact
-    **VID/PID would require decompiling several more constructor layers**; until
-    then it stays `[TO MEASURE]` — though, being a Comneon reference stack, it is
-    most likely a Comneon/Infineon default rather than Nissan-specific.
+    @0xA00BE004 + binary scans, 0 static-descriptor hits]`. The stack is a
+    **Rhapsody-generated C++ object stack** (vtables); the device descriptor is
+    emitted on EP0 by virtual dispatch, and the GET_DESCRIPTOR / `Invalid
+    Descriptor` strings sit in an indirected catalog with no direct code xref.
+    VID/PID is also **not a coding/NVM parameter** (no `idVendor`/`idProduct`
+    config strings) `[VERIFIED: strings]`, so it is hardcoded in the C++ stack.
+    Extracting the exact **VID/PID would mean tracing the EP0 virtual dispatch
+    through several object layers** (disproportionate effort, and the value may be
+    composed rather than a readable immediate); it stays `[TO MEASURE: USB
+    capture]` — likely a Comneon/Infineon default, not Nissan-specific.
+
+  **Working hypothesis — VID/PID may not matter** `[TO CONFIRM — unverified]`:
+  USB hosts that drive a modem typically bind by **device class (CDC)** rather
+  than by VID/PID, so the navi *may* accept any CDC-composite device that matches
+  the layout we already recovered (2× CDC + 1× MS, BULK endpoints). **This is an
+  assumption, not established** — some hosts do match VID/PID, and only a capture
+  or a bench test against the real AV unit can confirm it. Treat the VID/PID as
+  "probably irrelevant, but verify" rather than "irrelevant".
 
 ## Command layer
 
