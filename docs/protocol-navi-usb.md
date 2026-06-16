@@ -3,9 +3,12 @@
 Internal link between the TCU and the AV (navigation) unit. **Phase 2**
 (research) only.
 
-> This entire document is unverified. Source: reverse engineering published in
-> [nissan-leaf-tcu](https://github.com/developerfromjokela/nissan-leaf-tcu)
-> `[TO CONFIRM: direct re-reading of the repo and of the firmware strings]`.
+> The **command/protocol layer is recoverable from the firmware** (the USB CDC
+> stack and the `+XNAD` AT logic live in this baseband dump, unlike the CAN
+> code) and is now partly decompiled — see "Recovered command grammar" below.
+> The **physical/electrical layer** (USB speed, pinout, binary descriptors)
+> still needs a capture `[TO MEASURE]`. Sources: firmware-06.42 decompilation +
+> [nissan-leaf-tcu](https://github.com/developerfromjokela/nissan-leaf-tcu).
 
 ## Physical layer
 
@@ -50,6 +53,36 @@ Observed syntax patterns in the strings: `AT+XNADFS=`, `AT+XNADFS?`,
 `+XNAD_DCM_Params_EV_SVC:(0,1),(0-1440),(0,1)` (test form with ranges) —
 consistent with a standard AT command grammar
 `[VERIFIED: firmware strings]`.
+
+## Recovered command grammar (decompiled)
+
+The exact AT response grammar and parameter formats, recovered from the dump
+`[VERIFIED: firmware strings + decomp @0xA033B654 / @0xA033B668]`:
+
+| Response string | Payload format | Source param (coding ID) |
+|---|---|---|
+| `+XNAD_DCM_Params_VIN:"%s"` | VIN, 17 bytes (0x0F = unset/fill) | `0x29` (17 B) |
+| `+XNAD_DCM_Params_DCM_ID:"%s%s"` | two concatenated parts | `0x5B` (4 B) + `0x5A` (8 B) |
+| `+XNAD_DCM_Params_DCM_VER:"%s000%02d%02d"` | SW version + two BCD-ish fields | — |
+| `+XNAD_DCM_Params_NAVI_ID:"%s"` | navi/unit ID, 14 bytes | `0x27` (14 B) |
+| `+XNAD_DCM_Params_EV_SVC:%d,%d,%d` | enable, interval **0–1440 min** (≤24 h), enable | coding |
+| `+XNAD_DCM_Params_CHG_HIST:%d` (`=(0-3)`) | charge-history mode 0–3 | coding |
+| `+XNAD_DCM_Params_PRE_AC_HIST:%d` | pre-A/C history | coding |
+| `+XNAD_DICCIDSER:"%s"` | SIM ICCID | — |
+| `+XNAD_NAVI_Info_sent:(0,1),(0,1),(YYYYMMDDHHMMSS)` | two flags + timestamp (2000–2300 range) | — |
+
+Behavior: the navi (USB host) queries; the TCU reads the value from coding/NVM
+via a parameter accessor (`obj->fn[0x90](id, buf, len)`) and replies with the
+AT string, setting a result code — **1 = OK, 2 = error**
+`[VERIFIED: decomp @0xA033B654]`. Call-control commands (`+XNAD_Ecall_*`,
+`+XNAD_ACNcall_*`, `+XNAD_servicecall_*`: `start_request` / `end_request` /
+`go_to_voice` / `go_to_data`) have their own handlers
+`[VERIFIED: decomp @0xA02CDDE4]`.
+
+What this means for emulation: the application protocol the ESP32-S3 must speak
+to satisfy the navi is **largely recoverable from the dump without hardware** —
+remaining unknowns are the framing details and the physical layer, not the
+command vocabulary.
 
 ## Decompilation note (Ghidra)
 
