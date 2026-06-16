@@ -116,6 +116,37 @@ part of the `+XNAD` family is clearly modem/eCall control, while
 split between "to the navi" and "to the modem" remains `[TO CONFIRM:
 USB capture]`.
 
+## What the TCU does for the navi — and what it does NOT
+
+Decompiling the navi data path settles the scope question: **rich content
+(Google/POI search, charging-station lists, weather, traffic) does not pass
+through this TCU and is not in the dump** — a strings sweep finds no such handlers
+`[VERIFIED: strings — 0 content handlers]`. That content is handled by the
+**navigation unit's own software** talking to the server; the TCU plays only two
+roles:
+
+1. **Position reporter (navi → TCU → server).** `EvAcpHandler` (`@0xA02F3A10`)
+   parses `navi info` from the AV unit — `position`, `datum`, `home`,
+   `latitude`/`longitude` (mode/deg/min/sec) with range validation (lat ≤ 90°,
+   minutes ≤ 60, lon ≤ 180) — and the report builder (`@0xA02D1DE0`) assembles a
+   CARWINGS message: *vehicle descriptor + destination + source + time stamp +
+   navi position + authentication* `[VERIFIED: decomp @0xA02F3A10, @0xA02D1DE0]`.
+2. **Data bearer / NAD (Network Access Device).** The navi opens its own IP
+   session *through* the TCU's modem: `BspNwaDial` returns `IP/DNS1/DNS2`, APN and
+   carrier parameter sets (1–15) are coded, and `+XNAD` literally means Network
+   Access Device `[VERIFIED: strings + decomp]`.
+
+**Design consequence (the "intermediary" strategy).** The replacement does **not**
+need to reverse the content protocol. It needs to (a) **emulate the modem/NAD
+interface** the navi drives over USB CDC — the `+XNAD` / `DCM_Params` /
+`NAVI_Info_sent` grammar (recovered) plus the USB enumeration (needs a capture);
+(b) **route the navi's IP traffic** to the internet/server; (c) ensure the server
+the navi targets is a live OpenCARWINGS that implements those endpoints
+`[TO CONFIRM: where the navi points + OpenCARWINGS feature coverage]`; and (d)
+**receive `navi info` and report it** for the EV features (grammar recovered). The
+only remaining hard unknown is **physical** (USB descriptors, port, speed) — see
+the routing/descriptor notes above.
+
 ## Navi presence is gated by the `AUDIO_TYPE` coding
 
 The TCU only expects a navigation unit when its `AUDIO_TYPE` coding says so.
