@@ -95,31 +95,53 @@ Done with Ghidra 12.1.2 headless on `application.bin`. Load base determined as
 `ARM:LE:32:v5t`. Functions below are named by the FW debug strings they
 reference.
 
-### app → S12: the `requestCanAction` IPC message
+### The app ↔ S12 IPC catalog (the factory feature map)
 
-`EvAcApp: send can active to S12` decompiles (`@0xA02F502C`) to an IPC send of a
-**6-byte message**, not a CAN write:
+The application processor never touches CAN; it exchanges fixed **6-byte IPC
+messages** with the S12, sent through one transport call
+`FUN_a038E90C(ipcHandle, channel=4, buf, len=6)` `[VERIFIED: decomp]`. The first
+byte is an **opcode**, and one byte (`struct+0x84`) is a rolling **sequence
+counter** echoed in the S12's reply. This catalog is the authoritative list of
+what the factory TCU can drive/observe — Chlorophyll's feature checklist for what
+to wire to EV-CAN, even though we won't replicate the IPC itself.
 
-- opcode byte **`0x85`**, an **active/inactive flag** (`1` = active), plus
-  parameters and a status byte, sent via `requestCanAction - send via IPC`
-  to the S12; on failure logs `requestCanAction - sendMessage failed`.
-- Each EV app has its own active/inactive pair: `EvAcApp`, `EvChargeApp`,
-  `EvChargeStatusApp`, `EvPluginRmdApp`.
+**App → S12 (requests):**
 
-`[VERIFIED: Ghidra decomp @0xA02F502C — 6-byte IPC msg, opcode 0x85, active
-flag]`. This confirms the architecture: the app issues **high-level CAN-action
-requests** to the S12; it never names raw CAN IDs. So the IDs stay in the S12,
-which is not in this dump (see below).
+| Opcode | Message | Payload | Source |
+|---|---|---|---|
+| `0x85` | `requestCanAction` | `actionType` (16-bit) + **active/inactive flag** (`1`=active) + seq | `@0xA02CC214` / `@0xA02F502C` |
+| `0x8F` | `resendCarVolt2S12` | 12 V **car voltage** (2 B) + seq — power-mgmt handshake | `@0xA02C31AC` |
 
-### S12 → app: status notification channel
+Each EV feature issues a `0x85` with its own active/inactive pair:
+`EvAcApp` (remote A/C), `EvChargeApp` (charge), `EvChargeStatusApp`,
+`EvPluginRmdApp` (plug-in reminder) `[VERIFIED: strings + decomp]`. Other IPC
+services seen (not all byte-decoded): immobilizer (`Immo Block`=1 / `Unblock`=2 /
+`ImmoStatus`=9, `IpcSrvImmobilizer`), GPS-speed report (`gpsSpeedReport`), and
+S12 management (`Get S12 Version`, `Write First LogZone to S12`, `Re-Initial S12
+EEPROM and write Signature`) `[VERIFIED: strings]`.
 
-`@0xA0438600` is a dispatcher over a subtype byte for status the S12 pushes
-back: `Sensor 1/2`, `HSD1_S12_STATUS` / `HSD2_S12_STATUS` (high-side driver
-outputs), `DIG_OUT_S12_STATUS`, `HVAC_ON_STATUS`
-`[VERIFIED: decomp @0xA0438600]`. This is the **GPIO / power-output / HVAC
-state** channel — not the rich battery telemetry (SOC/GIDs), which travels as a
-data response to a CAN-action request on a different path `[TO CONFIRM:
-deeper decomp]`.
+**S12 → app (notifications):** dispatcher `@0xA0438600` switches on **`byte[2]`
+(subtype)**, each carrying `TID` + `Para` `[VERIFIED: decomp @0xA0438600]`:
+
+| subtype | Notification |
+|---|---|
+| 1 | `Sensor 1` |
+| 2 | `Sensor 2` |
+| 3 | `HSD1_S12_STATUS` (high-side driver 1) |
+| 4 | `HSD2_S12_STATUS` (high-side driver 2) |
+| 5 | `DIG_OUT_S12_STATUS` (digital output) |
+| 6 | `ITM_5V_DET_STATUS` (5 V detect) |
+| 7 | `HVAC_ON_STATUS` |
+| 0 / other | "Invalid sensor or GPIO message" |
+
+This is the **GPIO / power-output / HVAC state** channel — not the rich battery
+telemetry (SOC/GIDs), which comes back as a data response to a `0x85` request on a
+different path `[TO CONFIRM: deeper decomp]`. Separately, an **S12 state report**
+(`@0xA03F795C`) decodes `byte[5]`: **bit 4 = "stay awake, CAN active"**, **bit 5 =
+"stay awake, diag active"** — how the S12 tells the baseband why it is being kept
+awake `[VERIFIED: decomp @0xA03F795C]`. The car-voltage path is ACK'd by the S12
+with a matching `Seq` (`ipcSrvPowerCarVoltSend` Idle/Resend/Run state machine)
+`[VERIFIED: strings]`.
 
 ### Reporting intervals — units confirmed, defaults not in code
 
