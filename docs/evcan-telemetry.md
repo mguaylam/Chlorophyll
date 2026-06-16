@@ -80,6 +80,25 @@ Control direction (TCU → bus, for Phase 1 TX): the firmware logs
 and `Control EVCAN via line to VCM` `[VERIFIED: EVCAN strings]`. Mechanism and
 frame contents still `[TO MEASURE: sniff]`.
 
+**The three remote-command EV apps** (each builds an "RFN message" and issues a
+`requestCanAction` to the S12) `[VERIFIED: strings + decomp]`:
+
+- `EvAcApp` — **remote A/C** (`DCM_PRI_ACON`).
+- `EvChargeApp` — **start charge** (`send charge request`).
+- `EvBatteryHeat` — **remote battery heating** start/stop (`ev_heat_start_stop`),
+  available only if `Heat_start_stop_exist` is set.
+
+**Autonomous (parked) helper apps**, not remote commands: `EvPluginRmdApp`
+(plug-in reminder — runs on ACC-off + IGN-off, wakes EV-CAN, persistent
+`rest_timer_count`) and `EvStopRmdApp` (charge-stop reminder) `[VERIFIED:
+strings]`. These drive the "you forgot to plug in" / "charge stopped"
+notifications.
+
+> Note: **`RVFC` (Remote Vehicle Function Control) is the anti-theft/SVT
+> protocol** (tracking start/stop, immobilization — used by `SvtApp`/`ImmobApp`),
+> **not** the EV command path `[VERIFIED: strings]`. The EV commands above go
+> through the `Ev*` apps, not RVFC. Out of scope for Chlorophyll.
+
 This list maps onto the GDC body fields above; the mapping FW-name → GDC-field
 is direct for SOC/SOH/charge/AC. The remaining unknown is **which CAN ID carries
 each** — the table below is the (unverified) community hypothesis to confirm.
