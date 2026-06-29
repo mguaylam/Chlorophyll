@@ -151,3 +151,14 @@ charge is a separate, higher-risk task: `[TBD — do not attempt until reading
 is solid and the vehicle is parked; the original TCU's TX behavior must be
 characterized first]`. See the charge/AC command codes the server expects in
 [protocol-server.md](protocol-server.md).
+
+**Remote A/C may need a hardware activation discrete, not just CAN TX.** OVMS
+reports that triggering remote climate on the 2013–2016 Leaf requires asserting
+an *"EV System Activation Request Signal"* by feeding **+12 V to a TCU connector
+pin** (their docs say pin 11), and that the factory TCU must be disconnected
+from CAR-CAN so the two don't contend `[TO CONFIRM: OVMS Leaf docs —
+openvehicles]`. So the factory TCU likely drives a **discrete wake line** to
+bring the EV system up alongside the `DCM_PRI_ACON` request — remote A/C is not
+purely a CAN message. Which M67 pin carries it (and whether the NAM AZE0 matches
+OVMS's "pin 11") is `[TO MEASURE]` — see [pinout.md](pinout.md) (M67, "EV System
+Activation Request").

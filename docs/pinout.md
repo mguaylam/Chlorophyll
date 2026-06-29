@@ -22,7 +22,27 @@ SW 06.42R, HW 95048, Continental `[VERIFIED: owner's unit label]`.
 | 4 | W | IGN | 12 V with power switch ON |
 | 9 | L | **EV CAN H** | Direct EV-CAN access at the TCU |
 | 10 | G | **EV CAN L** | |
+| 11 | — | listed "–" in SM, but see activation-request note below | `[VERIFIED: SM AV-538 — "–"]` / `[TO CONFIRM: OVMS]` |
 | others | — | not connected / unlabeled | `[VERIFIED: SM AV-538 — listed as "–"]` |
+
+**EV System Activation Request (candidate — TX path for remote climate)**:
+OVMS reports that on the **2013–2016 Leaf (ZE0-0/1)** it generates the *"EV
+System Activation Request Signal"* by feeding **+12 V to TCU connector pin 11**
+— concretely, it wires its **DA26 pin 18 ("Ext 12V") to the TCU pin 11** with a
+single conductor `[TO CONFIRM: OVMS Leaf docs — openvehicles, vehicle_nissanleaf]`.
+This is the discrete line the factory TCU asserts to wake the EV system while the
+car is off, so a replacement TCU likely must drive the same pin to do remote A/C
+(see [evcan-telemetry.md](evcan-telemetry.md), Phase 1 TX).
+
+> **Conflict to resolve — do not treat this as a verified mapping.** The NAM SM
+> signal table lists **M67 terminal 11 as "–" (not connected)**
+> `[VERIFIED: SM AV-538]`, which contradicts OVMS's "pin 11". Possible reasons:
+> OVMS's "pin 11" is on a different connector or uses a different numbering
+> (OVMS primarily documents EU/JDM cars); the NAM harness differs; or the signal
+> exists but is unnamed on the SM pages read so far. `[TO MEASURE: with the
+> factory TCU installed, probe the M67 "–" pins (esp. 11) for +12 V during an
+> EV-system activation, and cross-check the SM wiring diagram for an "EV system
+> activation / main-relay request" line]`.
 
 Fuses `[VERIFIED: SM AV-590 (assignment), AV-529 (ratings in wiring
 diagram)]`:
@@ -90,3 +110,5 @@ not connected.
 - [ ] M113 connector type (Hirose GT16?) `[TO CONFIRM]`
 - [ ] EV-CAN bitrate and frame IDs visible at M67 9/10 `[TO MEASURE: CAN
   sniffer on the TCU connector]`
+- [ ] Which M67 pin (OVMS says 11) carries the "EV System Activation Request"
+  +12 V discrete, vs the SM "–" listing `[TO CONFIRM / TO MEASURE]`
