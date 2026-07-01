@@ -134,10 +134,48 @@ is lwIP with TCP keepalive. Exact default intervals and retry behavior:
 
 ## To verify (Phase 0)
 
-- [ ] Exercise a Python client against `test_server.py`
-  (nissan-leaf-tcu@1372ec9, `scripts/`) and against a local OpenCARWINGS
-  `tcuserver` — byte-identical packets accepted.
+- [x] Exercise a Python client against the upstream server code — **done**.
+  Our `build_init_packet` / `build_data_packet` / `parse_response` output is
+  run through the *actual* `opencarwings@3927dad` parser
+  (`tculink/gdc_proto/parser.parse_gdc_packet`) and its response builders in
+  `tools/tests/test_upstream_conformance.py`. Every field round-trips: VIN,
+  tcu_id, unit_id, iccid, sw_version, vehicle descriptor (0x92), auth
+  user + CRC-32 password hash, GPS lat/lon, and the EV-info body (SOC, GIDs,
+  SOH, plug/charge/AC/ignition, range). The real server
+  (`management/commands/tcuserver.py`) reads the whole socket buffer and calls
+  `parse_gdc_packet(data)` directly with no length-framing, so parser-level
+  conformance equals server-level acceptance
+  `[VERIFIED: opencarwings@3927dad, conformance suite 2026-07-01]`.
+- [x] Live end-to-end against `nissan-leaf-tcu/scripts/test_server.py` — **done,
+  with one caveat**. A ZE0-descriptor INIT is accepted and answered with the
+  hardcoded *Get Charge Status* response (`02 00 00 08 28 02 00 90`); the server
+  decodes our VIN, tcu_id, unit_id, iccid and username correctly. **Caveat:**
+  `test_server.py` gates on `data.startswith(b'\x01\x02\x00')`, i.e. it hardcodes
+  byte[1] == 0x02 (a **ZE0** descriptor), so it silently drops our **AZE0**
+  (0x92) packets. This is a limitation of that illustrative script, not of our
+  builder — the opencarwings parser correctly treats byte[1] as the vehicle
+  descriptor (`aze0 = byte_data[1] != 0x02`). `test_server.py` also slices
+  `sw_version` at `[91:100]` and `pw_hash` at `[136:153]`, each one byte off
+  from opencarwings' `[90:99]` / `[137:152]`, producing a dropped leading `0`
+  and a spurious leading `\x00`; harmless (neither field is used for matching)
+  but a reminder that **opencarwings `tcuserver` is the authoritative target**,
+  not `test_server.py` `[VERIFIED: live run 2026-07-01]`.
+- [ ] Run against a *live* OpenCARWINGS `tcuserver` (Django + DB), not just its
+  parser, to confirm the full auth/command path end-to-end `[TO CONFIRM]`.
 - [ ] Does the real TCU care about the SMS content? `[TO CONFIRM: firmware]`
 - [ ] Real TCU session timing (socket lifetime, retries, periodic reports)
   `[TO CONFIRM]`
 - [ ] GPS block exact offsets vs a real capture `[TO CONFIRM]`
+
+**Conformance harness.** The checks above are reproducible from the repo:
+
+```
+git clone https://github.com/developerfromjokela/opencarwings      # 3927dad
+git clone https://github.com/developerfromjokela/nissan-leaf-tcu    # test_server
+cd tools
+CHLOROPHYLL_OPENCARWINGS_DIR=…/opencarwings \
+CHLOROPHYLL_NISSAN_LEAF_TCU_DIR=…/nissan-leaf-tcu \
+    .venv/bin/python -m pytest tests/test_upstream_conformance.py -v
+```
+
+Without the env vars the suite stays hermetic (those tests skip).

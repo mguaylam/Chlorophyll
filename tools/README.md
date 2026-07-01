@@ -16,7 +16,10 @@ carwings/
 ├── crc.py        # password hash (CRC-32 over password + "evtelematics")
 ├── protocol.py   # packet build/parse: INIT (type 1), DATA (type 3), responses
 └── client.py     # TcuClient: TCP socket that impersonates a TCU
-tests/            # pytest: hash vectors + packet round-trip
+tests/
+├── test_crc.py                  # hash vectors
+├── test_protocol.py             # packet round-trip via spec re-implementations
+└── test_upstream_conformance.py # round-trip via the *real* upstream code (opt-in)
 examples/
 └── fake_tcu.py   # connect to a server and run a logon + telemetry
 ```
@@ -27,6 +30,18 @@ examples/
 cd tools
 python -m venv .venv && .venv/bin/pip install -e '.[dev]'
 .venv/bin/python -m pytest
+```
+
+The default run is hermetic; `test_upstream_conformance.py` skips unless you
+point it at local clones of the reference repos, which makes it re-verify our
+byte layout against the upstream parser instead of our own re-implementations:
+
+```bash
+git clone https://github.com/developerfromjokela/opencarwings      # 3927dad
+git clone https://github.com/developerfromjokela/nissan-leaf-tcu    # test_server
+CHLOROPHYLL_OPENCARWINGS_DIR=…/opencarwings \
+CHLOROPHYLL_NISSAN_LEAF_TCU_DIR=…/nissan-leaf-tcu \
+    .venv/bin/python -m pytest tests/test_upstream_conformance.py -v
 ```
 
 ### What Phase 0 validated (2026-06-11)
